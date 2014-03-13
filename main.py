@@ -1,16 +1,24 @@
 #!/usr/bin/python
 
 import datetime
+import humod
 import time
 import RPi.GPIO as GPIO
 
 SLEEP_TICK = 1
+DESTINATION_NUMBER = '+7xxxxxxxxxx'
 
 def main():
     GPIO.setmode(GPIO.BOARD)
 
     # Configuring GPIO4 (pin 7) as INPUT
     GPIO.setup(7, GPIO.IN)
+
+    print "Initialising modem..."
+    rf = humod.Modem()
+    #print "Found %s"%(rf.show_model())
+    #rf.enable_textmode(True)
+    print rf.sms_send(DESTINATION_NUMBER, 'hello world')
 
     print "Watching"
     alert_state = False
