@@ -1,15 +1,23 @@
 #!/usr/bin/python
 
 import datetime
+import logging
 import serial
 import time
 import sys
 import RPi.GPIO as GPIO
 
 CONFIG_FILE = '/home/pi/eyebrow/default.conf'
+LOG_FILE    = '/home/pi/eyebrow/log'
+
+logger = logging.getLogger('eyebrow')
+logger.setLevel(logging.DEBUG)
+fh = logging.FileHandler(LOG_FILE)
+fh.setLevel(logging.DEBUG)
+logger.addHandler(fh)
 
 def str_send (port, data):
-    print "<<" + data
+    logger.debug("<<" + data)
     port.write(data)
 
     response = ''
@@ -18,7 +26,7 @@ def str_send (port, data):
             response = response + port.read(1)
             for eo in EOM_MARKERS:
                 if response[-len(eo):] == eo:
-                    print ">>%s"%response
+                    logger.debug(">>%s"%response)
                     return True
         time.sleep(1)
     return False
@@ -29,7 +37,7 @@ def main():
     # Configuring GPIO4 (pin 7) as INPUT
     GPIO.setup(7, GPIO.IN)
 
-    print "Initialising serial..."
+    logger.info("Initialising serial")
     stty = serial.Serial(MODEM_PORT, 115200, timeout=1)
     stty.open()
 
@@ -47,7 +55,7 @@ def main():
     sleep_interval = NORMAL_MODE_INTERVAL
     state_counter = 0
     state_counter_neg = 0
-    print "Entered mode STATE_NORMAL"
+    logger.info("Entered mode STATE_NORMAL")
     while True:
         status = GPIO.input(7)
         state_counter = state_counter + int(status)
@@ -58,24 +66,24 @@ def main():
             sleep_interval = SUSPICIOUS_MODE_INTERVAL
             state_counter = 0
             state_counter_neg = 0
-            print "[SUSPICIOUS] @ %s"%ts_suspicious
+            logger.warning("[SUSPICIOUS] @ %s"%ts_suspicious)
         if state == STATE_SUSPICIOUS and state_counter >= SUSPICIOUS_MODE_TOALERT_THRESHOLD:
             ts_alert = datetime.datetime.now()
             state = STATE_ALERT
             sleep_interval = ALERT_MODE_INTERVAL
             state_counter = 0
             state_counter_neg = 0
-            print "[ALERT] @ %s"%ts_alert
+            logger.critical("[ALERT] @ %s"%ts_alert)
         if state == STATE_SUSPICIOUS and state_counter_neg >= SUSPICIOUS_MODE_TONORMAL_THRESHOLD:
             suspicious_duration = datetime.datetime.now() - ts_suspicious
-            print "[NORMAL] reverted back from SUSPICIOUS after %s s"%suspicious_duration
+            logger.warning("[NORMAL] reverted back from SUSPICIOUS after %s s"%suspicious_duration)
             state = STATE_NORMAL
             sleep_interval = NORMAL_MODE_INTERVAL
             state_counter = 0
             state_counter_neg = 0
         if state == STATE_ALERT and state_counter_neg >= ALERT_MODE_TONORMAL_THRESHOLD:
             alert_duration = datetime.datetime.now() - ts_alert
-            print "[NORMAL] reverted back from ALTER after %s s"%alert_duration
+            logger.warning("[NORMAL] reverted back from ALERT after %s s"%alert_duration)
             state = STATE_NORMAL
             sleep_interval = NORMAL_MODE_INTERVAL
             state_counter = 0
@@ -90,12 +98,14 @@ if __name__ == '__main__':
         if len(r) == 2:
             if r[0] == '--config':
                 CONFIG_FILE = r[1]
+            if r[0] == '--log':
+                LOG_FILE = r[1]
 
     # Applying config
     try:
         execfile(CONFIG_FILE)
     except Exception, e:
-        print e
+        logger.critical(e)
         sys.exit()
 
     main()
