@@ -6,7 +6,7 @@ import time
 import sys
 import RPi.GPIO as GPIO
 
-CONFIG_FILE = 'default.conf'
+CONFIG_FILE = '/home/pi/eyebrow/default.conf'
 
 def str_send (port, data):
     print "<<" + data
