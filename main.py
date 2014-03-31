@@ -3,25 +3,10 @@
 import datetime
 import serial
 import time
+import sys
 import RPi.GPIO as GPIO
 
-MODEM_PORT = '/dev/ttyUSB0'
-DESTINATION_NUMBER = '+7xxxxxxxxxx'
-
-EOM_MARKERS = ['OK', 'ERROR']
-
-NORMAL_MODE_INTERVAL = 3
-SUSPICIOUS_MODE_INTERVAL = 1
-ALERT_MODE_INTERVAL = 3
-
-NORMAL_MODE_TOSUSPICIOUS_THRESHOLD = 2
-SUSPICIOUS_MODE_TOALERT_THRESHOLD = 4
-SUSPICIOUS_MODE_TONORMAL_THRESHOLD = 3
-ALERT_MODE_TONORMAL_THRESHOLD = 3
-
-STATE_NORMAL = 1
-STATE_SUSPICIOUS = 2
-STATE_ALERT = 3
+CONFIG_FILE = 'default.conf'
 
 def str_send (port, data):
     print "<<" + data
@@ -98,6 +83,21 @@ def main():
         time.sleep(sleep_interval)
 
 if __name__ == '__main__':
+
+    # Parsing ARGV
+    for a in sys.argv:
+        r = a.split('=')
+        if len(r) == 2:
+            if r[0] == '--config':
+                CONFIG_FILE = r[1]
+
+    # Applying config
+    try:
+        execfile(CONFIG_FILE)
+    except Exception, e:
+        print e
+        sys.exit()
+
     main()
 
 
